@@ -188,7 +188,7 @@ int ut_test(int argc, char **argv)
     float _min_val[4] = { 0 };
     float _sum[4] = { 0 };
     float _mean[4] = { 0 };
-
+    float *_diff = (float *)malloc(sizeof(float)*range*4);
     float inc = b*fastpi/range;
     float in = -b/2 * fastpi;
     for (int i = 0; i < range; i++) {
@@ -196,6 +196,7 @@ int ut_test(int argc, char **argv)
             float val0 = math_ops[j](in);
             float val1 = fast_math[j](in);
             float diff = absf(val0-val1);
+            _diff[i*4 + j] = diff;
             if (diff > _max[j]) {
                 _max[j] = diff;
                 _max_val[j] = in;
@@ -218,6 +219,10 @@ int ut_test(int argc, char **argv)
        printf("    %s:: max:%.6f(%.4f) min:%.6f(%.4f) mean:%.6f\n",
         metstr[i], _max[i], _max_val[i], _min[i], _min_val[i], _mean[i]);
     }
+    FILE *fp = fopen("diff.bin", "wb");
+    fwrite(_diff, 1, sizeof(float)*range*4, fp);
+    fclose(fp);
+    free(_diff);
     return 0;
 }
 
