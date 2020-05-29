@@ -7,6 +7,20 @@
 #define sign(x) ((x >= 0)? 1 : -1)
 #define abs(x) ((x >= 0)? (x) : -(x))
 
+#ifdef DEB
+#define logf(x) printf(#x ":%.6f ", x)
+#define logfn(x) printf(#x ":%.6f\n", x)
+#define logd(x) printf(#x ":%d ", x)
+#define logdn(x) printf(#x ":%d\n", x)
+#define log(fmt, x...) printf("%s %d " x, __func__,__LINE__, ##x) 
+#else
+#define logf(x)
+#define logfn(x)
+#define logd(x)
+#define logdn(x)
+#define log(fmt, x...)
+#endif
+
 const static float fastsmall = 0.05f;
 const static float fastpi = 3.14159265358f;
 const static float fastpi_2 = 3.14159265358f/2;
@@ -39,9 +53,7 @@ float fast_atan(float x)
         return x;
     else {
         // by regression
-        float x2 = ax * ax;
-        float x3 = x2 * ax;
-        return signX * (b + a0 * ax + a1 * x2 + a2 * x3);
+        return signX * (b + ax * ( a0 + ax * ( a1 + ax * a2)));
     }
 } 
 
@@ -57,14 +69,14 @@ float fast_cos(float x)
 
     int signX = sign(x);
     float ax = abs(x);
-
+    log("%.6f->%.6f < %.6f\n", x, ax, fastsmall);
     if (ax < fastsmall)
         return 1;
     else if (ax > fastpi_2) {
 #if 1   /* for fixed point */
         _x = ax / fastpi_2;
         _ix = (int)_x;
-        _quad = mod(_ix, 4);
+        _quad = mod2(_ix, 4);
         ax = (_x - _ix) * fastpi_2;
 #else   
         _quad = mod(ax / fastpi_2, 4);
@@ -79,13 +91,17 @@ float fast_cos(float x)
             ax = fastpi_2 - ax;
         }
         if (ax < fastsmall)
-            return signX; 
-    }
+            return signX;
+        logd(signX);logd(_quad);logdn(_ix);
+        logf(_x); logfn(ax);
+    } else
+        signX = 1;
     return signX * (c0 + ax * (c1 + ax * (c2 + ax * c3)));
 }
 
 float fast_sin(float x)
 {
+    log("%.6f\n", x);
     return fast_cos(fastpi_2 - x);
 }
 
