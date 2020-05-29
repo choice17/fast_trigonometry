@@ -37,23 +37,52 @@ static inline int mod2(int a, int b)
     return a & (b - 1);
 }
 
+#define cubic(x, b, a0, a1, a2) ((b) + (ax) * ( (a0) + (ax) * ( (a1) + (ax) * (a2)))) 
+
+
 float fast_atan(float x)
 {
-    const static float a0 = 1.10382257f;
-    const static float a1 = -0.36105955f;
-    const static float a2 = 0.04400221f;
-    const static float b = -0.00492334997743038f;
+    const static float a0[4] = {
+        -0.014959792240434089f,
+        1.13807883f,
+        -0.38254219f,
+        0.04463789f
+        };
+    const static float a1[4] = { 
+        0.23010930099207316f,
+        0.75442543f,
+        -0.19739737f,
+        0.0197099
+    };
+    const static float a2[4] = { 
+        0.6598880057410685f,
+        0.32430175f,
+        -0.05199834,
+        0.00313656
+    };
+
+    const static float cubic_high = fastpi;
+    const static float cubic_low = fastpi_2;
+    const static float high_thr = 5.5f;
+    const static float atansmall = 0.129;
+
     int signX = sign(x);
     float ax = abs(x);
-    if (ax > fastpi)
+    if (ax > high_thr)
         // https://math.stackexchange.com/questions/982838/asymptotic-approximation-of-the-arctangent/982859
         return (signX*(fastpi_2) - 1/x);
-    else if (ax < fastsmall)
+    else if (ax < atansmall) {
         // for small x
         return x;
-    else {
+    } else if (ax > cubic_high) {
         // by regression
-        return signX * (b + ax * ( a0 + ax * ( a1 + ax * a2)));
+        return signX * cubic(ax, a2[0], a2[1], a2[2], a2[3]);
+    } else if (ax > cubic_low) {
+        // by regression
+        return signX * cubic(ax, a1[0], a1[1], a1[2], a1[3]);
+    } else {
+        // by regression
+        return signX * cubic(ax, a0[0], a0[1], a0[2], a0[3]);
     }
 } 
 
@@ -114,6 +143,7 @@ float fast_tan(float x)
     const float t3 = -0.85751509;
     const float t4 = 0.9570163;
 
+    const float th = 1.3;
     float _x;
     int _ix, _quad, x2;
 
@@ -122,7 +152,7 @@ float fast_tan(float x)
 
     if (ax < fastsmall)
         return x;
-    if (ax > 1) {
+    if (ax > th) {
         _x = ax / fastpi_2;
         _ix = (int)_x;
         _quad = mod2(_ix, 2);
@@ -131,7 +161,7 @@ float fast_tan(float x)
             signX = -1;
         } else
             signX = 1;
-        if (ax > 1) {
+        if (ax > th) {
             ax = (_x - _ix) * fastpi_2;
             x2 = ax * ax;
             return signX * (ax * (945 - x2 * (105 - x2))) / (945 - x2 * (420 - 15 * x2));
