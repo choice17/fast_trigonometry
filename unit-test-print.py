@@ -7,8 +7,9 @@
 import numpy as np
 import matplotlib.pylab as plt
 import sys
+
 R = int(sys.argv[2])
-N = int(sys.argv[1])
+N = float(sys.argv[1])
 dat  = open("diff.bin", "rb").read()
 dat = np.fromstring(dat, np.float32)
 dat = dat.reshape(-1,4).T

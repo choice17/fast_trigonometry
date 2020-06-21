@@ -21,9 +21,9 @@
 #define log(fmt, x...)
 #endif
 
-const static float fastsmall = 0.05f;
-const static float fastpi = 3.14159265358f;
-const static float fastpi_2 = 3.14159265358f/2;
+#define fastsmall (0.05f)
+#define fastpi (3.14159265358f)
+#define fastpi_2 (3.14159265358f/2)
 //const static float fastpi2 = 3.14159265358f * 3.14159265358f;
 
 static inline int mod(int a, int b)
@@ -37,8 +37,13 @@ static inline int mod2(int a, int b)
     return a & (b - 1);
 }
 
-#define cubic(x, b, a0, a1, a2) ((b) + (ax) * ( (a0) + (ax) * ( (a1) + (ax) * (a2)))) 
+#define cubic(ax, b, a0, a1, a2) ((b) + (ax) * ((a0) + (ax) * ((a1) + (ax) * (a2)))) 
+#define quad(ax, b, a0, a1) ((b) + (ax) * ((a0) + (ax) * (a1)))
 
+static inline float lerp(float a, float b, float x)
+{
+    return a * x + b;   
+}
 
 float fast_atan(float x)
 {
@@ -88,10 +93,10 @@ float fast_atan(float x)
 
 float fast_cos(float x)
 {
-    const float c0 = 0.9970072879558844f;
-    const float c1 = 0.0385896;
-    const float c2 = -0.61311836;
-    const float c3 = 0.11737913;
+    const static float c0 = 0.9970072879558844f;
+    const static float c1 = 0.0385896;
+    const static float c2 = -0.61311836;
+    const static float c3 = 0.11737913;
 
     float _x; 
     int _ix, _quad;
@@ -137,13 +142,68 @@ float fast_sin(float x)
 float fast_tan(float x)
 {
     /* https://mae.ufl.edu/~uhk/ACCURATE-TANGENT.pdf */
-    const float t0 = 0.0031084695854767252f;
-    const float t1 = 0.9140496f;
-    const float t2 = 0.53540681;
-    const float t3 = -0.85751509;
-    const float t4 = 0.9570163;
+    const static float t0[] = { // 0.05 to 0.8
+        -0.005306908868911164,
+        1.07958615,
+        -0.31961611,
+        0.72791356
+    };
+    const static float t1[] = { // 0.8 to 1.2
+        -6.798523672037293,
+        24.20035856,
+        -26.75328616,
+        10.9062448
+    };
+    const static float t2[] = { // 1.2 to 1.37
+        -288.476741666932,
+        715.84338056,
+        -593.63206871,
+        166.00749918
+    };
+    const static float t3[] = { // 1.37 to 1.45
+        -4043.7026279735396,
+        8896.89927632,
+        -6536.19587117,
+        1605.2422637
+    };
+    const static float t4[] = { // 1.45 to 1.472
+        1513.2746348922383,
+        -2142.93149953,
+        762.05357123
+    };
+    const static float t5[] = { // 1.472 to 1.571
+       8.23809275e+00, 8.32297410e+00, 8.40959713e+00, 8.49801630e+00,
+       8.58828831e+00, 8.68047230e+00, 8.77462995e+00, 8.87082562e+00,
+       8.96912650e+00, 9.06960275e+00, 9.17232772e+00, 9.27737805e+00,
+       9.38483395e+00, 9.49477931e+00, 9.60730201e+00, 9.72249410e+00,
+       9.84045207e+00, 9.96127709e+00, 1.00850754e+01, 1.02119584e+01,
+       1.03420433e+01, 1.04754533e+01, 1.06123178e+01, 1.07527733e+01,
+       1.08969634e+01, 1.10450395e+01, 1.11971613e+01, 1.13534974e+01,
+       1.15142258e+01, 1.16795348e+01, 1.18496236e+01, 1.20247029e+01,
+       1.22049964e+01, 1.23907409e+01, 1.25821881e+01, 1.27796052e+01,
+       1.29832767e+01, 1.31935050e+01, 1.34106127e+01, 1.36349437e+01,
+       1.38668654e+01, 1.41067703e+01, 1.43550786e+01, 1.46122405e+01,
+       1.48787389e+01, 1.51550926e+01, 1.54418593e+01, 1.57396399e+01,
+       1.60490821e+01, 1.63708858e+01, 1.67058076e+01, 1.70546676e+01,
+       1.74183553e+01, 1.77978378e+01, 1.81941682e+01, 1.86084950e+01,
+       1.90420739e+01, 1.94962800e+01, 1.99726227e+01, 2.04727622e+01,
+       2.09985289e+01, 2.15519462e+01, 2.21352559e+01, 2.27509490e+01,
+       2.34018014e+01, 2.40909153e+01, 2.48217690e+01, 2.55982756e+01,
+       2.64248532e+01, 2.73065087e+01, 2.82489401e+01, 2.92586589e+01,
+       3.03431416e+01, 3.15110147e+01, 3.27722851e+01, 3.41386275e+01,
+       3.56237468e+01, 3.72438401e+01, 3.90181892e+01, 4.09699325e+01,
+       4.31270796e+01, 4.55238646e+01, 4.82025764e+01, 5.12160763e+01,
+       5.46313220e+01, 5.85344018e+01, 6.30378929e+01, 6.82918980e+01,
+       7.45011028e+01, 8.19520672e+01, 9.10587111e+01, 1.02441914e+02,
+       1.17077345e+02, 1.36591117e+02, 1.63910235e+02, 2.04888709e+02,
+       2.73185895e+02, 4.09779859e+02, 8.19560938e+02, 1.63312394e+16
+   };
+    const static float tan0_th = 0.8;
+    const static float tan1_th = 1.2;
+    const static float tan2_th = 1.37;
+    const static float tan3_th = 1.45;
+    const static float tan4_th = 1.472;
 
-    const float th = 1.3;
     float _x;
     int _ix, _quad, x2;
 
@@ -152,30 +212,44 @@ float fast_tan(float x)
 
     if (ax < fastsmall)
         return x;
-    if (ax > th) {
+    if (ax > fastpi_2) {
         _x = ax / fastpi_2;
         _ix = (int)_x;
         _quad = mod2(_ix, 2);
+        ax = (_x - _ix) * fastpi_2;
         if (_quad == 1) {
             ax = fastpi_2 - ax;
             signX = -1;
         } else
             signX = 1;
-        if (ax > th) {
-            ax = (_x - _ix) * fastpi_2;
-            x2 = ax * ax;
-            return signX * (ax * (945 - x2 * (105 - x2))) / (945 - x2 * (420 - 15 * x2));
-        }
     }
-    return signX * (t0 + ax * (t1 + ax * (t2 + ax * t3 + ax * t4)));
+    if (ax < tan0_th)
+        return signX * cubic(ax, t0[0], t0[1], t0[2], t0[3]);
+    else if (ax < tan1_th)
+        return signX * cubic(ax, t1[0], t1[1], t1[2], t1[3]);
+    else if (ax < tan2_th)
+        return signX * cubic(ax, t2[0], t2[1], t2[2], t2[3]);
+    else if (ax < tan3_th)
+        return signX * cubic(ax, t3[0], t3[1], t3[2], t3[3]);
+    else if (ax < tan4_th)
+        return signX * quad(ax, t4[0], t4[1], t4[2]);
+    else {
+        // 1.471 to 1.571
+        float ax_up = ax * 1000;
+        int iax_up = ax_up;
+        int idx = iax_up - 1472;
+        float r = ax_up - iax_up;
+        return signX * lerp(t5[idx], t5[idx+1], r);
+    }
 }
 
+#define MATH_OPS(x) (double (*)(double))(x)
 
 int app(int argc, char **argv)
 {
     float b = atof(argv[2]);
     int range = atoi(argv[3]);
-    double (*math_ops[4])(double) = { (double *)atan, (double *)sin, (double *)cos, (double *)tan};
+    double (*math_ops[4])(double) = { MATH_OPS(atan), MATH_OPS(sin), MATH_OPS(cos), MATH_OPS(tan)};
     float (*fast_math[4])(float) = {fast_atan, fast_sin, fast_cos, fast_tan};
     const char *metstr[] = {"atan", "sin", "cos", "tan"};
     unsigned int met = atoi(argv[4]);
@@ -222,7 +296,7 @@ int ut_test(int argc, char **argv)
 {
     float b = atof(argv[2]);
     int range = atoi(argv[3]);
-    double (*math_ops[4])(double) = { (double *)atan, (double *)sin, (double *)cos, (double *)tan};
+    double (*math_ops[4])(double) = { MATH_OPS(atan), MATH_OPS(sin), MATH_OPS(cos), MATH_OPS(tan)};
     float (*fast_math[4])(float) = {fast_atan, fast_sin, fast_cos, fast_tan};
     const char *metstr[] = {"atan", " sin", " cos", " tan"};
     //unsigned int met = atoi(argv[4]);
@@ -262,7 +336,7 @@ int ut_test(int argc, char **argv)
     printf(" test range [%.6f --- %.6f]\n", -b/2 * fastpi, b/2 * fastpi);
     printf("                 math vs fast_tri\n");
     for (int i = 0; i < 4; i++) {
-       printf("    %s:: max:%.6f(%.4f) min:%.6f(%.4f) mean:%.6f\n",
+       printf("%8s:: max:%.6f(%.4f) min:%.6f(%.4f) mean:%.6f\n",
         metstr[i], _max[i], _max_val[i], _min[i], _min_val[i], _mean[i]);
     }
     FILE *fp = fopen("diff.bin", "wb");
@@ -272,13 +346,24 @@ int ut_test(int argc, char **argv)
     return 0;
 }
 
+void help()
+{
+    printf(
+        "===============\n"
+        "\targc:5 => [dummy] [input float] [iters] [fast_ops_method]\n"
+        "\targc:4 => [dummy] [range * -pi/2 to pi/2] [arr size]\n"
+        );
+}
 int main(int argc, char **argv)
 {
-    
+ 
+    double (*math)(double) = atan;    
     if (argc == 5)
         app(argc, argv);
-    else
+    else if (argc == 4)
         ut_test(argc, argv);
+    else
+        help();
     return 0;
 }
 
