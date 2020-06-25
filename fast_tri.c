@@ -5,7 +5,7 @@
 #include <assert.h>
 
 #define sign(x) ((x >= 0)? 1 : -1)
-#define abs(x) ((x >= 0)? (x) : -(x))
+#define abs(x) ((x > 0)? (x) : -(x))
 
 #ifdef DEB
 #define logf(x) printf(#x ":%.6f ", x)
@@ -23,7 +23,10 @@
 
 #define fastsmall (0.05f)
 #define fastpi (3.14159265358f)
-#define fastpi_2 (3.14159265358f/2)
+#define fastpi_2 (1.5707963267948966f)
+#define fastpi_4 (0.7853981633974483f)
+#define fast2pi (6.283185307179586)
+
 //const static float fastpi2 = 3.14159265358f * 3.14159265358f;
 
 static inline int mod(int a, int b)
@@ -37,8 +40,19 @@ static inline int mod2(int a, int b)
     return a & (b - 1);
 }
 
+static inline int fast_fmod2(float x, float m, int q, float *ax)
+{
+    float _x = x / m;
+    int _ix = _x;
+    *ax = (_x - _ix) * m;
+    return mod2(_ix, q);
+}
+
 #define cubic(ax, b, a0, a1, a2) ((b) + (ax) * ((a0) + (ax) * ((a1) + (ax) * (a2)))) 
 #define quad(ax, b, a0, a1) ((b) + (ax) * ((a0) + (ax) * (a1)))
+
+#define cubicArr(ax, a) ((a[0]) + (ax) * ((a[1]) + (ax) * ((a[2]) + (ax) * (a[3])))) 
+#define quadArr(ax, a) ((a[0]) + (ax) * ((a[1]) + (ax) * (a[2])))
 
 static inline float lerp(float a, float b, float x)
 {
@@ -48,89 +62,81 @@ static inline float lerp(float a, float b, float x)
 float fast_atan(float x)
 {
     const static float a0[4] = {
-        -0.014959792240434089f,
-        1.13807883f,
-        -0.38254219f,
-        0.04463789f
-        };
+        -0.0037002278175466974,
+        1.04710252,
+        -0.18627361,
+        -0.07857707
+    };
     const static float a1[4] = { 
-        0.23010930099207316f,
-        0.75442543f,
-        -0.19739737f,
-        0.0197099
+        -0.03835873083805175,
+        1.22213379,
+        -0.47333034,
+        0.0749329
     };
     const static float a2[4] = { 
-        0.6598880057410685f,
-        0.32430175f,
-        -0.05199834,
-        0.00313656
+        0.23748654401677938,
+        0.74395186,
+        -0.19253416,
+        0.01897149
+    };
+    const static float a3[4] = {
+        0.6655143527424704,
+        0.31987618,
+        -0.05084753,
+        0.00303765
+    };
+    const static float a4[4] = {
+        1.029536240433053,
+        0.10961277,
+        -0.00974906,
+        0.00032041
     };
 
-    const static float cubic_high = fastpi;
-    const static float cubic_low = fastpi_2;
-    const static float high_thr = 5.5f;
-    const static float atansmall = 0.129;
+    const static float atan_high_thr     = 10.0f;
+    const static float atan_higl_thr     = 5.0f;
+    const static float atan_midh_thr     = fastpi;
+    const static float atan_mid_thr      = fastpi_2;
+    const static float atan_mids_thr     = fastpi_4;
+    const static float atan_smal_thr     = 0.1;
 
     int signX = sign(x);
     float ax = abs(x);
-    if (ax > high_thr)
-        // https://math.stackexchange.com/questions/982838/asymptotic-approximation-of-the-arctangent/982859
-        return (signX*(fastpi_2) - 1/x);
-    else if (ax < atansmall) {
-        // for small x
-        return x;
-    } else if (ax > cubic_high) {
-        // by regression
-        return signX * cubic(ax, a2[0], a2[1], a2[2], a2[3]);
-    } else if (ax > cubic_low) {
-        // by regression
-        return signX * cubic(ax, a1[0], a1[1], a1[2], a1[3]);
-    } else {
-        // by regression
-        return signX * cubic(ax, a0[0], a0[1], a0[2], a0[3]);
-    }
+
+    // https://math.stackexchange.com/questions/982838/asymptotic-approximation-of-the-arctangent/982859
+    if (ax > atan_high_thr)       return (signX*(fastpi_2) - 1/x);
+    // for small x
+    else if (ax < atan_smal_thr)  return x;
+    // by regression
+    else if (ax < atan_mids_thr)  return signX * cubicArr(ax, a0);
+    // by regression
+    else if (ax < atan_mid_thr)   return signX * cubicArr(ax, a1);
+    // by regression
+    else if (ax < atan_midh_thr)  return signX * cubicArr(ax, a2);
+    // by regression
+    else if (ax < atan_higl_thr)  return signX * cubicArr(ax, a3);
+    else                          return signX * cubicArr(ax, a4);
 } 
+
+float fast_cos_quad2(float x)
+{
+    const static float c0=0.9994880721226505;
+    const static float c1=-0.49574695;
+    const static float c2=0.03677138;
+    float x2 = x * x;
+    return quad(x2, c0, c1, c2);
+}
 
 float fast_cos(float x)
 {
-    const static float c0 = 0.9970072879558844f;
-    const static float c1 = 0.0385896;
-    const static float c2 = -0.61311836;
-    const static float c3 = 0.11737913;
-
-    float _x; 
-    int _ix, _quad;
-
-    int signX = sign(x);
     float ax = abs(x);
-    log("%.6f->%.6f < %.6f\n", x, ax, fastsmall);
-    if (ax < fastsmall)
-        return 1;
-    else if (ax > fastpi_2) {
-#if 1   /* for fixed point */
-        _x = ax / fastpi_2;
-        _ix = (int)_x;
-        _quad = mod2(_ix, 4);
-        ax = (_x - _ix) * fastpi_2;
-#else   
-        _quad = mod(ax / fastpi_2, 4);
-#endif
-        signX = 1;
-        if (_quad == 1) {
-            ax = fastpi_2 - ax;
-            signX = -1;
-        } else if (_quad == 2) {
-            signX = -1;
-        } else if (_quad == 3) {
-            ax = fastpi_2 - ax;
-        }
-        if (ax < fastsmall)
-            return signX;
-        logd(signX);logd(_quad);logdn(_ix);
-        logf(_x); logfn(ax);
-    } else
-        signX = 1;
-    return signX * (c0 + ax * (c1 + ax * (c2 + ax * c3)));
+    //if (ax < fastsmall) return x;
+    int quad = fast_fmod2(ax, fastpi_2, 4, &ax);
+
+    if      (quad == 0) return fast_cos_quad2(ax);
+    else if (quad == 1) return -fast_cos_quad2(fastpi_2 - ax);
+    else if (quad == 2) return -fast_cos_quad2(ax);
+    else if (quad == 3) return fast_cos_quad2(fastpi_2 - ax);
+    else assert(0);
 }
 
 float fast_sin(float x)
@@ -213,32 +219,43 @@ float fast_tan(float x)
     if (ax < fastsmall)
         return x;
     if (ax > fastpi_2) {
-        _x = ax / fastpi_2;
-        _ix = (int)_x;
-        _quad = mod2(_ix, 2);
-        ax = (_x - _ix) * fastpi_2;
-        if (_quad == 1) {
-            ax = fastpi_2 - ax;
-            signX = -1;
-        } else
-            signX = 1;
+        _quad = fast_fmod2(ax, fastpi_2, 2, &ax);
+        if (signX >= 0) { // > 0
+            if (_quad == 1) {
+                ax = fastpi_2 - ax;
+                signX = -1;
+            } else signX = 1;
+        } else {  // < 0
+            if (_quad == 0) {}
+            else {
+                ax = fastpi_2 - ax;
+                signX = 1;
+            }
+                        printf("MOD>> %.4f => %.4f Q[%d] => %s%.4f\n",
+                x,ax,_quad,signX>=0?"+":"-",ax);
+        }
+        if (ax < fastsmall) {
+            return signX * ax;
+        }
     }
     if (ax < tan0_th)
-        return signX * cubic(ax, t0[0], t0[1], t0[2], t0[3]);
+        return signX * cubicArr(ax, t0);
     else if (ax < tan1_th)
-        return signX * cubic(ax, t1[0], t1[1], t1[2], t1[3]);
+        return signX * cubicArr(ax, t1);
     else if (ax < tan2_th)
-        return signX * cubic(ax, t2[0], t2[1], t2[2], t2[3]);
+        return signX * cubicArr(ax, t2);
     else if (ax < tan3_th)
-        return signX * cubic(ax, t3[0], t3[1], t3[2], t3[3]);
+        return signX * cubicArr(ax, t3);
     else if (ax < tan4_th)
-        return signX * quad(ax, t4[0], t4[1], t4[2]);
+        return signX * quadArr(ax, t4);
     else {
         // 1.471 to 1.571
         float ax_up = ax * 1000;
         int iax_up = ax_up;
         int idx = iax_up - 1472;
         float r = ax_up - iax_up;
+        printf(">>>%.3f=>[%.3f]Q[%d] %.4f %.4f rate:%.4f => %.4f\n",
+            x, ax, _quad, t5[idx], t5[idx+1], r, signX * lerp(t5[idx], t5[idx+1], r));
         return signX * lerp(t5[idx], t5[idx+1], r);
     }
 }
@@ -350,7 +367,7 @@ void help()
 {
     printf(
         "===============\n"
-        "\targc:5 => [dummy] [input float] [iters] [fast_ops_method]\n"
+        "\targc:5 => [-0(math)/else(fast_math)] [input float] [iters] [fast_ops_method]\n"
         "\targc:4 => [dummy] [range * -pi/2 to pi/2] [arr size]\n"
         );
 }

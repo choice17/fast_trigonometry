@@ -18,11 +18,17 @@ logdiff = np.log2(dat)
 xaxis = np.arange(R) * 3.14 * N / R - 3.14 * N / 2
 fig = plt.figure()
 ax = [0,0,0,0]
+MIN = -0.01
+MAX = 0.01
 name = ["atan", "sin", "cos", "tan"]
 for i in range(4):
     ax[i]= fig.add_subplot(4,1,i+1)
     ax[i].plot(xaxis, dat[i])
     ax[i].set_ylabel(name[i])
+    ax[i].axis(
+        ymin=np.maximum(MIN,np.min(dat[i])),
+        ymax=np.minimum(MAX, np.max(dat[i]))
+        )
 ax[3].set_xlabel('angle(radian)')
 plt.show()
 
