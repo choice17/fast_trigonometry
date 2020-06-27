@@ -4,6 +4,9 @@
 #include <stdlib.h>
 #include <assert.h>
 
+// https://zh.wikipedia.org/wiki/%E6%B3%B0%E5%8B%92%E7%BA%A7%E6%95%B0
+// https://stackoverflow.com/posts/9073675/revisions
+
 #define sign(x) ((x >= 0)? 1 : -1)
 #define abs(x) ((x > 0)? (x) : -(x))
 
@@ -124,6 +127,7 @@ float fast_cos_quad2(float x)
     const static float c2=0.03677138;
     float x2 = x * x;
     return quad(x2, c0, c1, c2);
+    //return 1 + x2 * (-0.5 + 0.041666666666666664 * x2);
 }
 
 float fast_cos(float x)
@@ -254,23 +258,68 @@ float fast_tan(float x)
         int iax_up = ax_up;
         int idx = iax_up - 1472;
         float r = ax_up - iax_up;
-        printf(">>>%.3f=>[%.3f]Q[%d] %.4f %.4f rate:%.4f => %.4f\n",
-            x, ax, _quad, t5[idx], t5[idx+1], r, signX * lerp(t5[idx], t5[idx+1], r));
+        //printf(">>>%.3f=>[%.3f]Q[%d] %.4f %.4f rate:%.4f => %.4f\n",
+        //    x, ax, _quad, t5[idx], t5[idx+1], r, signX * lerp(t5[idx], t5[idx+1], r));
         return signX * lerp(t5[idx], t5[idx+1], r);
     }
 }
 
-#define MATH_OPS(x) (double (*)(double))(x)
+float fast_asin(float x)
+{
+  float negate = x < 0;
+  float ax = abs(x);
+  float ret = -0.0187293;
+  ret *= ax;
+  ret += 0.0742610;
+  ret *= ax;
+  ret -= 0.2121144;
+  ret *= ax;
+  ret += 1.5707288;
+  ret = fastpi * 0.5 - sqrt(1.0 - ax) * ret;
+  return ret - 2 * negate * ret;
+}
 
+//https://stackoverflow.com/questions/3380628/fast-arc-cos-algorithm
+float fast_acos(float x)
+{
+  #if 0
+  float negate = x < 0;
+  float ax = abs(x);
+  float ret = -0.0187293;
+  ret = ret * ax;
+  ret = ret + 0.0742610;
+  ret = ret * ax;
+  ret = ret - 0.2121144;
+  ret = ret * ax;
+  ret = ret + 1.5707288;
+  ret = ret * sqrt(1.0-ax);
+  ret = ret - 2 * negate * ret;
+  return negate * 3.14159265358979 + ret;
+  
+    static const float C  = 0.10501094f;
+    float r, s, t, u;
+    t = (x < 0) ? (-x) : x;  // handle negative arguments
+    u = 1.0f - t;
+    s = sqrtf (u + u);
+    r = C * u * s + s;  // or fmaf (C * u, s, s) if FMA support in hardware
+    if (x < 0) r = fastpi - r;  // handle negative arguments
+    return r;
+  #endif
+  return fastpi_2 - fast_asin(x);
+}
+
+
+#define MATH_OPS(x) (double (*)(double))(x)
+#define OPS_NUM (6)
 int app(int argc, char **argv)
 {
     float b = atof(argv[2]);
     int range = atoi(argv[3]);
-    double (*math_ops[4])(double) = { MATH_OPS(atan), MATH_OPS(sin), MATH_OPS(cos), MATH_OPS(tan)};
-    float (*fast_math[4])(float) = {fast_atan, fast_sin, fast_cos, fast_tan};
-    const char *metstr[] = {"atan", "sin", "cos", "tan"};
+    double (*math_ops[OPS_NUM])(double) = { MATH_OPS(atan), MATH_OPS(sin), MATH_OPS(cos), MATH_OPS(tan), MATH_OPS(acos), MATH_OPS(asin)};
+    float (*fast_math[OPS_NUM])(float) = {fast_atan, fast_sin, fast_cos, fast_tan, fast_acos, fast_asin};
+    const char *metstr[] = {"atan", "sin", "cos", "tan", "acos", "asin"};
     unsigned int met = atoi(argv[4]);
-    assert(met < 5);
+    assert(met < OPS_NUM+1);
 
     float a = 0.0;
     if (strcmp(argv[1], "-0")==0) {
@@ -288,13 +337,16 @@ int app(int argc, char **argv)
     printf("sin(%2.2f) = %.5f\n", b, sin(b));
     printf("cos(%2.2f) = %.5f\n", b, cos(b));
     printf("tan(%2.2f) = %.5f\n", b, tan(b));
+    printf("acos(%2.2f) = %.5f\n", b, acos(b));
+    printf("asin(%2.2f) = %.5f\n", b, asin(b));
     printf("fast_atan(%2.2f) = %.5f\n", b, fast_atan(b));
     printf("fast_sin(%2.2f) = %.5f\n", b, fast_sin(b));
     printf("fast_cos(%2.2f) = %.5f\n", b, fast_cos(b));
     printf("fast_tan(%2.2f) = %.5f\n", b, fast_tan(b));
+    printf("fast_acos(%2.2f) = %.5f\n", b, fast_acos(b));
+    printf("fast_asin(%2.2f) = %.5f\n", b, fast_asin(b));
     return 0;
 }
-
 
 static inline float max(float x, float y)
 {
@@ -313,23 +365,23 @@ int ut_test(int argc, char **argv)
 {
     float b = atof(argv[2]);
     int range = atoi(argv[3]);
-    double (*math_ops[4])(double) = { MATH_OPS(atan), MATH_OPS(sin), MATH_OPS(cos), MATH_OPS(tan)};
-    float (*fast_math[4])(float) = {fast_atan, fast_sin, fast_cos, fast_tan};
-    const char *metstr[] = {"atan", " sin", " cos", " tan"};
+    double (*math_ops[OPS_NUM])(double) = { MATH_OPS(atan), MATH_OPS(sin), MATH_OPS(cos), MATH_OPS(tan), MATH_OPS(acos), MATH_OPS(asin)};
+    float (*fast_math[OPS_NUM])(float) = {fast_atan, fast_sin, fast_cos, fast_tan, fast_acos, fast_asin};
+    const char *metstr[] = {"atan", " sin", " cos", " tan", "acos", "asin"};
     //unsigned int met = atoi(argv[4]);
     //assert(met < 5);
 
-    float _max[4] = { 0 };
-    float _min[4] = { 0 };
-    float _max_val[4] = { 0 };
-    float _min_val[4] = { 0 };
-    float _sum[4] = { 0 };
-    float _mean[4] = { 0 };
+    float _max[OPS_NUM] = { 0 };
+    float _min[OPS_NUM] = { 0 };
+    float _max_val[OPS_NUM] = { 0 };
+    float _min_val[OPS_NUM] = { 0 };
+    float _sum[OPS_NUM] = { 0 };
+    float _mean[OPS_NUM] = { 0 };
     float *_diff = (float *)malloc(sizeof(float)*range*4);
-    float inc = b*fastpi/range;
-    float in = -b/2 * fastpi;
+    float inc = b/range;
+    float in = -b/2;
     for (int i = 0; i < range; i++) {
-        for (int j = 0; j < 4; j++) {
+        for (int j = 0; j < OPS_NUM; j++) {
             float val0 = math_ops[j](in);
             float val1 = fast_math[j](in);
             float diff = absf(val0-val1);
@@ -346,13 +398,13 @@ int ut_test(int argc, char **argv)
         }
         in += inc;
     }
-    for (int i = 0; i < 4; i++) {
+    for (int i = 0; i < OPS_NUM; i++) {
         _mean[i] = _sum[i] / range;
     }
     printf("========= unit-test acc summary ========\n\n");
-    printf(" test range [%.6f --- %.6f]\n", -b/2 * fastpi, b/2 * fastpi);
+    printf(" test range [%.6f --- %.6f]\n", -b/2 , b/2 );
     printf("                 math vs fast_tri\n");
-    for (int i = 0; i < 4; i++) {
+    for (int i = 0; i < OPS_NUM; i++) {
        printf("%8s:: max:%.6f(%.4f) min:%.6f(%.4f) mean:%.6f\n",
         metstr[i], _max[i], _max_val[i], _min[i], _min_val[i], _mean[i]);
     }
