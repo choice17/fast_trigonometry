@@ -329,22 +329,22 @@ float fast_asin2(float x)
     else if (ax < asin_thr_h) return signa * cubicArr(ax, asin_coef[1]);
     else {
         #if 1
-        int idx = ax * 10000 - 9000;
+        int ax_f = (ax * 10000.0f);
+        int idx = ax_f - 9000;
         if (idx == 0) return signa * 1.11976951;
         else if (idx == 1000) return signa * fastpi_2;
-        float fidx = (float)(idx + 9000) / 10000;
-        float a0[] = {fidx-0.0001, asin_lkt[idx-1]};
+        float fidx = ax_f * 0.0001f;
+        float a0[] = {fidx-0.0001f, asin_lkt[idx-1]};
         float a1[] = {fidx, asin_lkt[idx]};
-        float a2[] = {fidx+0.0001, asin_lkt[idx+1]};
+        float a2[] = {fidx+0.0001f, asin_lkt[idx+1]};
         float y =  signa * quadInterpolation(a0, a1, a2, ax);
         //printf("[%s %d] idx:%d ax:%.4f a0[%.4f,%.4f] a0[%.4f,%.4f], a0[%.4f,%.4f] => %.4f\n", __func__,__LINE__,
         //    idx, ax,
         //    a0[0], a0[1], a1[0], a1[1], a2[0], a2[1], y);
         #else
-            float ax_up = ax * 10000;
-            int iax_up = ax_up;
+            int iax_up = ax * 10000;
             int idx = iax_up - 9000;
-            float r = (float)(ax_up - iax_up)/100;
+            float r = (float)(ax_up - iax_up) * 0.01;
          //   printf("[%s:%d] x:%.4f ax:%.4f idx:%d [%.4f-%.4f] rate:%.4f => %.4f\n",
          //       __func__,__LINE__,
          //       x, ax, idx, asin_lkt[idx], asin_lkt[idx+1], r, signa * lerp(asin_lkt[idx], asin_lkt[idx+1], r));
