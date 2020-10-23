@@ -5,7 +5,8 @@
 Use curve fitting/ bilinear interpolation to approximate tri function
 
 Average speed up to 2X
-Accuracy map:
+Error ratio
+
 <img src="./Figure_1.png" width="400" height="400" />
 
 it currently supports
