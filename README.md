@@ -4,8 +4,9 @@
 
 Use curve fitting/ bilinear interpolation to approximate tri function
 
-Average speed up to 2X
-Error ratio
+Average speed up to 2X to tri function in std math.h
+
+* Error ratio
 
 <img src="./Figure_1.png" width="400" height="400" />
 
