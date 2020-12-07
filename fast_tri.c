@@ -4,6 +4,8 @@
 #include <stdlib.h>
 #include <assert.h>
 
+#include "fast_tri.h"
+
 // https://zh.wikipedia.org/wiki/%E6%B3%B0%E5%8B%92%E7%BA%A7%E6%95%B0
 // https://stackoverflow.com/posts/9073675/revisions
 
@@ -25,10 +27,6 @@
 #endif
 
 #define fastsmall (0.05f)
-#define fastpi (3.14159265358f)
-#define fastpi_2 (1.5707963267948966f)
-#define fastpi_4 (0.7853981633974483f)
-#define fast2pi (6.283185307179586)
 
 //const static float fastpi2 = 3.14159265358f * 3.14159265358f;
 
